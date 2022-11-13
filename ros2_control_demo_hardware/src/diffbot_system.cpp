@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "ros2_control_demo_hardware/diffbot_system.hpp"
-
+#include "ros2_control_demo_hardware/hover_comms.h"
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -22,6 +22,7 @@
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
+
 
 namespace ros2_control_demo_hardware
 {
@@ -34,14 +35,13 @@ hardware_interface::CallbackReturn DiffBotSystemHardware::on_init(
   {
     return hardware_interface::CallbackReturn::ERROR;
   }
-
   base_x_ = 0.0;
   base_y_ = 0.0;
   base_theta_ = 0.0;
 
   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
-  hw_start_sec_ = std::stod(info_.hardware_parameters["example_param_hw_start_duration_sec"]);
-  hw_stop_sec_ = std::stod(info_.hardware_parameters["example_param_hw_stop_duration_sec"]);
+  // hw_start_sec_ = std::stod(info_.hardware_parameters["example_param_hw_start_duration_sec"]);
+  // hw_stop_sec_ = std::stod(info_.hardware_parameters["example_param_hw_stop_duration_sec"]);
   // END: This part here is for exemplary purposes - Please do not copy to your production code
   hw_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   hw_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -128,15 +128,17 @@ std::vector<hardware_interface::CommandInterface> DiffBotSystemHardware::export_
 hardware_interface::CallbackReturn DiffBotSystemHardware::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
+  
+  hover_comms.setup();
   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
-  RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Activating ...please wait...");
+  // RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Activating ...please wait...");
 
-  for (auto i = 0; i < hw_start_sec_; i++)
-  {
-    rclcpp::sleep_for(std::chrono::seconds(1));
-    RCLCPP_INFO(
-      rclcpp::get_logger("DiffBotSystemHardware"), "%.1f seconds left...", hw_start_sec_ - i);
-  }
+  // for (auto i = 0; i < hw_start_sec_; i++)
+  // {
+  //   rclcpp::sleep_for(std::chrono::seconds(1));
+  //   RCLCPP_INFO(
+  //     rclcpp::get_logger("DiffBotSystemHardware"), "%.1f seconds left...", hw_start_sec_ - i);
+  // }
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
   // set some default values
@@ -159,14 +161,14 @@ hardware_interface::CallbackReturn DiffBotSystemHardware::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
-  RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Deactivating ...please wait...");
+  // RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Deactivating ...please wait...");
 
-  for (auto i = 0; i < hw_stop_sec_; i++)
-  {
-    rclcpp::sleep_for(std::chrono::seconds(1));
-    RCLCPP_INFO(
-      rclcpp::get_logger("DiffBotSystemHardware"), "%.1f seconds left...", hw_stop_sec_ - i);
-  }
+  // for (auto i = 0; i < hw_stop_sec_; i++)
+  // {
+  //   rclcpp::sleep_for(std::chrono::seconds(1));
+  //   RCLCPP_INFO(
+  //     rclcpp::get_logger("DiffBotSystemHardware"), "%.1f seconds left...", hw_stop_sec_ - i);
+  // }
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
   RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Successfully deactivated!");
@@ -179,21 +181,28 @@ hardware_interface::return_type DiffBotSystemHardware::read(
 {
   double radius = 0.02;  // radius of the wheels
   double dist_w = 0.1;   // distance between the wheels
-  for (uint i = 0; i < hw_commands_.size(); i++)
-  {
-    // Simulate DiffBot wheels's movement as a first-order system
-    // Update the joint status: this is a revolute joint without any limit.
-    // Simply integrates
-    hw_positions_[i] = hw_positions_[1] + period.seconds() * hw_commands_[i];
-    hw_velocities_[i] = hw_commands_[i];
+  SerialFeedback read_msg = hover_comms.readValues();
+  hw_positions_[0] =  (read_msg.wheelR_cnt + (read_msg.wheelR_multR * ENCODER_MAX))/TICKS_PER_ROTATION * M_PI * 2; // 0 is Right
+  hw_velocities_[0] = read_msg.speedR_meas * 0.10472;  // convert rpm to Rad/s
+  hw_positions_[1] =  (read_msg.wheelL_cnt + (read_msg.wheelL_multL * ENCODER_MAX))/TICKS_PER_ROTATION * M_PI * 2;// 1 is Left
+  hw_velocities_[1] = read_msg.speedL_meas * 0.10472;  // convert rpm to Rad/s
 
-    // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
-    RCLCPP_INFO(
-      rclcpp::get_logger("DiffBotSystemHardware"),
-      "Got position state %.5f and velocity state %.5f for '%s'!", hw_positions_[i],
-      hw_velocities_[i], info_.joints[i].name.c_str());
-    // END: This part here is for exemplary purposes - Please do not copy to your production code
-  }
+  // for (uint i = 0; i < hw_commands_.size(); i++)
+  // {
+    
+  //   // Simulate DiffBot wheels's movement as a first-order system
+  //   // Update the joint status: this is a revolute joint without any limit.
+  //   // Simply integrates
+  //   hw_positions_[i] = hw_positions_[1] + period.seconds() * hw_commands_[i];
+  //   hw_velocities_[i] = hw_commands_[i];
+
+  //   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
+  //   // RCLCPP_INFO(
+  //   //   rclcpp::get_logger("DiffBotSystemHardware"),
+  //   //   "Got position state %.5f and velocity state %.5f for '%s'!", hw_positions_[i],
+  //   //   hw_velocities_[i], info_.joints[i].name.c_str());
+  //   // END: This part here is for exemplary purposes - Please do not copy to your production code
+  // }
 
   // Update the free-flyer, i.e. the base notation using the classical
   // wheel differentiable kinematics
@@ -205,9 +214,9 @@ hardware_interface::return_type DiffBotSystemHardware::read(
   base_theta_ += base_dtheta * period.seconds();
 
   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
-  RCLCPP_INFO(
-    rclcpp::get_logger("DiffBotSystemHardware"), "Joints successfully read! (%.5f,%.5f,%.5f)",
-    base_x_, base_y_, base_theta_);
+  // RCLCPP_INFO(
+  //   rclcpp::get_logger("DiffBotSystemHardware"), "Joints successfully read! (%.5f,%.5f,%.5f)",
+  //   base_x_, base_y_, base_theta_);
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
   return hardware_interface::return_type::OK;
@@ -216,17 +225,19 @@ hardware_interface::return_type DiffBotSystemHardware::read(
 hardware_interface::return_type ros2_control_demo_hardware::DiffBotSystemHardware::write(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
+  double vel[2] = {hw_commands_[1], hw_commands_[0]};
+  hover_comms.setMotorValues(vel);
   // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
-  RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Writing...");
+  // RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Writing...");
 
-  for (auto i = 0u; i < hw_commands_.size(); i++)
-  {
-    // Simulate sending commands to the hardware
-    RCLCPP_INFO(
-      rclcpp::get_logger("DiffBotSystemHardware"), "Got command %.5f for '%s'!", hw_commands_[i],
-      info_.joints[i].name.c_str());
-  }
-  RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Joints successfully written!");
+  // for (auto i = 0u; i < hw_commands_.size(); i++)
+  // {
+  //   // Simulate sending commands to the hardware
+  //   RCLCPP_INFO(
+  //     rclcpp::get_logger("DiffBotSystemHardware"), "Got command %.5f for '%s'!", hw_commands_[i],
+  //     info_.joints[i].name.c_str());
+  // }
+  // RCLCPP_INFO(rclcpp::get_logger("DiffBotSystemHardware"), "Joints successfully written!");
   // END: This part here is for exemplary purposes - Please do not copy to your production code
 
   return hardware_interface::return_type::OK;

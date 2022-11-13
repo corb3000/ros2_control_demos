@@ -17,17 +17,16 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
+# target_link_libraries(${PROJECT_NAME} serial) # the magic line to add the Serial library (drop the lib off the front)
+
 
 ## COMPILE
 add_library(
   ${PROJECT_NAME}
   SHARED
   src/diffbot_system.cpp
-  src/rrbot_system_position_only.cpp
-  src/rrbot_system_multi_interface.cpp
-  src/rrbot_system_with_sensor.cpp
-  src/rrbot_actuator.cpp
-  src/external_rrbot_force_torque_sensor.cpp
+  src/hover_comms.cpp
+
 )
 target_include_directories(
   ${PROJECT_NAME}

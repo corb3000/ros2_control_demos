@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/opt/ros/humble/include/**",
+                "/usr/include/**",
+                "${workspaceFolder}/ros2_control_demo_hardware/include",
+                "/opt/ros/humble/include/lifecycle_msgs",
+                "/opt/ros/humble/include/rclcpp_lifecycle",
+                "/opt/ros/humble/include/rcl_lifecycle"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
